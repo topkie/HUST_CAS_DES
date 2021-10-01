@@ -13,7 +13,7 @@ subkey = List[bt56]
 
 
 class DES:
-    '''HUST Pass des.js 的 Python 实现
+    '''HUST CAS 系统 des.js 的 Python 实现
 
     Usage:
 
@@ -36,7 +36,7 @@ class DES:
         '''初始化加/解密所用的 key, 可以指定多个
 
         对每一个 key 应用一次完整的加/解密过程，key 的长度任意，
-        不足 8 byte 时自动以 0 填充
+        不足 8 byte 时自动以 0 填充，过长的会自动分块
 
         Args:
             keys (str): 用于加/解密的密钥
@@ -45,7 +45,7 @@ class DES:
         if not keys:
             raise ValueError('至少应该指定一个 key')
 
-        self._set_key(keys)
+        self.set_key(*keys)
 
     def encrypt(self, data: str) -> str:
         # region docstring
@@ -60,9 +60,9 @@ class DES:
             str: 加密后的 hex 字符串（小写）
         '''
         # endregion
-        bt642hex = utils.bt642bytes
+        bt642bytes = utils.bt642bytes
         result = self._crypt(data, self.ENCRYPT)
-        return b''.join(bt642hex(r) for r in result).hex()
+        return b''.join(bt642bytes(r) for r in result).hex()
 
     def decrypt(self, data: str) -> str:
         # region docstring
@@ -119,8 +119,8 @@ class DES:
           block = data_handler(data[i:i + block_step])
           ip_byte = block
 
-          for Kns in subkeys:
-            for Kn in Kns:
+          for Kns in subkeys:  # 每个 key 对应的块
+            for Kn in Kns:  # 每个块生成的 subkey
                 ip_byte = init_permute(ip_byte)
 
                 ip_left = ip_byte[:32]
@@ -138,7 +138,7 @@ class DES:
 
         return resule
 
-    def _set_key(self, keys: 'tuple[str,...]'):
+    def set_key(self, *keys: str):
         '''为传入的 key 生成子密钥'''
         self.key_num = len(keys)
         self.ensubkeys: list[list[subkey]] = []
@@ -332,7 +332,7 @@ class utils:
 
     @staticmethod
     def str2bt64(text: str) -> 'list[int]':
-        '''将字符串的二进制值映射到数组中，每个字符占 16 bit
+        '''将字符串的码位值映射到二进制数组中，每个字符占 16 bit
 
         返回的二进制数组固定长度 64 bit，输入字符串长度不够补 0，过长则忽略
         '''
